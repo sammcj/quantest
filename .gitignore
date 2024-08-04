@@ -23,3 +23,24 @@ go.work.sum
 
 # env file
 .env
+
+gollama
+**/.swp
+**/.tmp
+**/.trash
+**/*.log
+dist/
+.selected*
+dist/
+**/*.zip
+**/*.dmg
+**/*.tar.gz
+vendor/
+node_modules/
+.idea/
+.vscode/
+Modelfile*
+**/*.DS_Store
+**/cache
+
+quantest
