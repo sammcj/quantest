@@ -81,9 +81,9 @@ build: ## Run build
 	@echo "Bumping version to: $(QUANTEST_VERSION)"
 	@export QUANTEST_VERSION=$(QUANTEST_VERSION)
 	@if [ "$(shell uname)" == "Darwin" ]; then \
-		sed -i '' -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" main.go ; \
+		sed -i '' -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	else \
-		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" main.go ; \
+		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	fi
 
 	@go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'"
@@ -92,16 +92,16 @@ build: ## Run build
 ci: ## build for linux and macOS
 	$(eval QUANTEST_VERSION := $(shell if [ -z "$(QUANTEST_VERSION)" ]; then echo "$(shell git describe --tags --abbrev=0 | sed 's/^v//')"; else echo "$(QUANTEST_VERSION)"; fi))
 	@if [ "$(shell uname)" == "Darwin" ]; then \
-		sed -i '' -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" main.go ; \
+		sed -i '' -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	else \
-		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" main.go ; \
+		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	fi
 	@echo "Building with version: $(QUANTEST_VERSION)"
 
 	@mkdir -p ./dist/macos ./dist/linux_amd64 ./dist/linux_arm64
-	GOOS=darwin GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/macos/
-	GOOS=linux GOARCH=amd64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_amd64/
-	GOOS=linux GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_arm64/
+	GOOS=darwin GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/macos/quantest cmd/quantest/main.go
+	GOOS=linux GOARCH=amd64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_amd64/quantest cmd/quantest/main.go
+	GOOS=linux GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_arm64/quantest cmd/quantest/main.go
 
 	@zip -r quantest-macos.zip ./dist/macos/quantest
 	@zip -r quantest-linux-amd64.zip ./dist/linux_amd64/quantest
