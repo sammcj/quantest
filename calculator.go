@@ -5,46 +5,72 @@ package main
 import (
 	"fmt"
 	"math"
+	"slices"
+	"sort"
 
 	"github.com/sammcj/gollama/logging"
 )
 
 // CalculateBPW calculates the best BPW for a given memory and context constraint
 func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCacheQuantisation, quantType string, ollamaModelInfo *OllamaModelInfo) (interface{}, error) {
-	logging.DebugLogger.Println("Calculating BPW...")
+  logging.DebugLogger.Println("Calculating BPW...")
 
-	switch quantType {
-	case "exl2":
-		for _, bpw := range EXL2Options {
-			vram, err := CalculateVRAM(modelID, bpw, context, kvCacheQuant, ollamaModelInfo)
-			if err != nil {
-				return nil, err
-			}
-			if vram < memory {
-				return bpw, nil
-			}
-		}
-	case "gguf":
-		for name, bpw := range GGUFMapping {
-			vram, err := CalculateVRAM(modelID, bpw, context, kvCacheQuant, ollamaModelInfo)
-			if err != nil {
-				return nil, err
-			}
-			if vram < memory {
-				return name, nil
-			}
-		}
-	default:
-		return nil, fmt.Errorf("invalid quantisation type: %s", quantType)
-	}
+  contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
+  if !slices.Contains(contextSizes, context) {
+      contextSizes = append(contextSizes, context)
+      sort.Ints(contextSizes)
+  }
+  bestQuants := make(map[int]string)
 
-  // print the table if no suitable BPW is found
-  fmt.Println("No suitable BPW found for the given memory constraint.")
-  // func GenerateQuantTable(modelID string, fitsVRAM float64, ollamaModelInfo *OllamaModelInfo) (QuantResultTable, error) {
+  // Function to find best quant for a given context size
+  findBestQuant := func(ctxSize int) string {
+      var bestQuant string
+      maxBPW := 0.0
 
-  GenerateQuantTable(modelID, memory, ollamaModelInfo)
+      for quantName, bpw := range GGUFMapping {
+          vram, err := CalculateVRAM(modelID, bpw, ctxSize, kvCacheQuant, ollamaModelInfo)
+          if err != nil {
+              logging.ErrorLogger.Printf("Error calculating VRAM for %s: %v", quantName, err)
+              continue
+          }
 
-	return nil, fmt.Errorf("no suitable BPW found for the given memory constraint")
+          if vram <= memory && bpw > maxBPW {
+              maxBPW = bpw
+              bestQuant = quantName
+          }
+      }
+
+      return bestQuant
+  }
+
+  // Find best quants for all context sizes
+  for _, ctxSize := range contextSizes {
+      bestQuants[ctxSize] = findBestQuant(ctxSize)
+  }
+
+  // Print best quants for each context size
+  fmt.Println("\nRecommended quantizations for different context sizes:")
+  for _, ctxSize := range contextSizes {
+      if quant, ok := bestQuants[ctxSize]; ok && quant != "" {
+          if ctxSize == context {
+              fmt.Printf("Context %d: %s (User Specified)\n", ctxSize, quant)
+          } else {
+              fmt.Printf("Context %d: %s\n", ctxSize, quant)
+          }
+      } else {
+          if ctxSize == context {
+              fmt.Printf("Context %d: No suitable quantization found\n", ctxSize)
+          } else {
+              fmt.Printf("Context %d: No suitable quantization found\n", ctxSize)
+          }
+      }
+  }
+
+  if bestQuant, ok := bestQuants[context]; ok && bestQuant != "" {
+      return bestQuant, nil
+  }
+
+  return nil, fmt.Errorf("no suitable BPW found for the given memory constraint and context size")
 }
 
 // CalculateVRAM calculates the VRAM usage for a given model and configuration

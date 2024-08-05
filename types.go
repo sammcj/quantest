@@ -51,14 +51,17 @@ type VRAMEstimation struct {
 	FitsAvailable    bool
 	MaxContextSize   int
 	RecommendedQuant string
+	ollamaModelInfo  *OllamaModelInfo
 }
 
 type OllamaModelInfo struct {
 	Details struct {
-		ParameterSize     string   `json:"parameter_size"`
-		QuantizationLevel string   `json:"quantization_level"`
+		ParentModel       string   `json:"parent_model"`
+		Format            string   `json:"format"`
 		Family            string   `json:"family"`
 		Families          []string `json:"families"`
+		ParameterSize     string   `json:"parameter_size"`
+		QuantizationLevel string   `json:"quantization_level"`
 	} `json:"details"`
 	ModelInfo struct {
 		Architecture         string `json:"general.architecture"`
