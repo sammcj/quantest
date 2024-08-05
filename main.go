@@ -68,7 +68,7 @@ func main() {
 	fmt.Println(PrintFormattedTable(table))
 
 	// Print the recommendations
-	fmt.Println("\nMaximum quants for different context sizes:")
+	fmt.Println("\nMaximum quants for context sizes:\n---")
 	contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
 	for _, ctxSize := range contextSizes {
 		if quant, ok := estimation.Recommendations[ctxSize]; ok && quant != "" {
@@ -87,10 +87,10 @@ func main() {
 	}
 
 	// Print the estimation results
-	fmt.Printf("\nEstimation Results:\n")
+	fmt.Printf("\nEstimation Results:\n---\n")
 	fmt.Printf("Model: %s\n", estimation.ModelName)
-	fmt.Printf("Estimated VRAM Required For A Context Size Of %d: %.2f GB\n", estimation.ContextSize, estimation.EstimatedVRAM)
-	fmt.Printf("Fits Available VRAM: %v\n", estimation.FitsAvailable)
-	fmt.Printf("Max Context Size: %d\n", estimation.MaxContextSize)
+	fmt.Printf("Estimated vRAM Required For A Context Size Of %d: %.2f GB\n", estimation.ContextSize, estimation.EstimatedVRAM)
+	fmt.Printf("Model Fits In Available vRAM (%.2f GB): %t\n", estimation.AvailableVRAM, estimation.FitsAvailable)
+	fmt.Printf("Max Context Size For vRAM At Supplied Quant (BPW: %s): %d\n", estimation.QuantLevel, estimation.MaxContextSize)
   fmt.Printf("Maximum Quantisation For Provided Context Size Of %d: %s\n", estimation.ContextSize, estimation.MaximumQuant)
 }

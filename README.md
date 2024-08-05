@@ -49,8 +49,8 @@ Using Ollama API URL: http://localhost:11434
 | Q6_K    | 6.59 | 7.0 | 8.0 | 9.4(9.4,9.4)    | 12.2(12.2,12.2) | 15.0(15.0,15.0) | 17.8(17.8,17.8) |
 | Q8_0    | 8.50 | 8.8 | 9.9 | 11.4(11.4,11.4) | 14.4(14.4,14.4) | 17.4(17.4,17.4) | 20.3(20.3,20.3) |
 
-
-Maximum quants for different context sizes:
+Maximum quants for context sizes:
+---
 Context 2048: Q8_0
 Context 8192: Q8_0
 Context 16384: Q8_0
@@ -59,10 +59,11 @@ Context 49152: Q4_K_L
 Context 65536: IQ3_M
 
 Estimation Results:
+---
 Model: llama3.1:8b-instruct-q6_K
-Estimated VRAM Required For A Context Size Of 4096: 5.55 GB
-Fits Available VRAM: true
-Max Context Size: 54004
+Estimated vRAM Required For A Context Size Of 4096: 5.55 GB
+Model Fits In Available vRAM (12.00 GB): true
+Max Context Size For vRAM At Supplied Quant (BPW: Q4_K_M): 54004
 Maximum Quantisation For Provided Context Size Of 4096: Q8_0
 ```
 
