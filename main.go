@@ -14,7 +14,7 @@ var Version string
 func main() {
   var modelName string
   flag.StringVar(&modelName, "model", "", "Huggingface/ModelID or Ollama:modelName")
-  vram := flag.Float64("vram", DefaultVRAM, "Available VRAM in GB")
+  vram := flag.Float64("vram", DefaultVRAM, "Available vRAM in GB")
   contextSize := flag.Int("context", DefaultContextSize, "Optional context size")
   quantLevel := flag.String("quant", DefaultQuantLevel, "Optional quantisation level")
   kvQuant := flag.String("kvQuant", "fp16", "Optional KV Cache quantisation level")
@@ -37,28 +37,27 @@ func main() {
       os.Exit(1)
   }
 
-
   if strings.Contains(modelName, ":") {
-    ollamaHost := os.Getenv("OLLAMA_HOST")
-    if ollamaHost == "" {
-        fmt.Println("Warning: OLLAMA_HOST environment variable is not set. Using default http://localhost:11434")
-        os.Setenv("OLLAMA_HOST", "http://localhost:11434")
-    }
+      ollamaHost := os.Getenv("OLLAMA_HOST")
+      if ollamaHost == "" {
+          fmt.Println("Warning: OLLAMA_HOST environment variable is not set. Using default http://localhost:11434")
+          os.Setenv("OLLAMA_HOST", "http://localhost:11434")
+      }
   }
 
   // Get the available VRAM
-	estimation, err := EstimateVRAM(
-		&modelName,
-		*contextSize,
-		KVCacheQuantisation(*kvQuant),
-		*vram,
-		*quantLevel,
-	)
-	if err != nil {
-    logging.ErrorLogger.Println("Error estimating VRAM:", err)
-		fmt.Printf("Error estimating VRAM: %v\n", err)
-		os.Exit(1)
-	}
+  estimation, err := EstimateVRAM(
+      &modelName,
+      *contextSize,
+      KVCacheQuantisation(*kvQuant),
+      *vram,
+      *quantLevel,
+  )
+  if err != nil {
+      logging.ErrorLogger.Println("Error estimating VRAM:", err)
+      fmt.Printf("Error estimating VRAM: %v\n", err)
+      os.Exit(1)
+  }
 
   // Generate and print the quant estimation table
   table, err := GenerateQuantTable(modelName, *vram, estimation.ollamaModelInfo)
@@ -68,13 +67,30 @@ func main() {
   }
   fmt.Println(PrintFormattedTable(table))
 
-	// Print the estimation results
-	fmt.Printf("Model: %s\n", estimation.ModelName)
-	fmt.Printf("Context Size: %d\n", estimation.ContextSize)
-	fmt.Printf("Estimated VRAM: %.2f GB\n", estimation.EstimatedVRAM)
-	fmt.Printf("Fits Available VRAM: %v\n", estimation.FitsAvailable)
-	fmt.Printf("Max Context Size: %d\n", estimation.MaxContextSize)
-	fmt.Printf("Recommended Quantisation: %s\n", estimation.RecommendedQuant)
+  // Print the recommendations
+  fmt.Println("\nMaximum quants for different context sizes:")
+  contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
+  for _, ctxSize := range contextSizes {
+      if quant, ok := estimation.Recommendations[ctxSize]; ok && quant != "" {
+          if ctxSize == estimation.ContextSize {
+              fmt.Printf("Context %d (User Specified): %s \n", ctxSize, quant)
+          } else {
+              fmt.Printf("Context %d: %s\n", ctxSize, quant)
+          }
+      } else {
+          if ctxSize == estimation.ContextSize {
+              fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
+          } else {
+              fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
+          }
+      }
+  }
 
-
+  // Print the estimation results
+  fmt.Printf("\nEstimation Results:\n")
+  fmt.Printf("Model: %s\n", estimation.ModelName)
+  fmt.Printf("Estimated VRAM Required For A Context Size Of %d: %.2f GB\n", estimation.ContextSize, estimation.EstimatedVRAM)
+  fmt.Printf("Fits Available VRAM: %v\n", estimation.FitsAvailable)
+  fmt.Printf("Max Context Size: %d\n", estimation.MaxContextSize)
+  fmt.Printf("Maximum Quantisation: %s\n", estimation.MaximumQuant)
 }

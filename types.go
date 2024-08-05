@@ -50,8 +50,9 @@ type VRAMEstimation struct {
 	EstimatedVRAM    float64
 	FitsAvailable    bool
 	MaxContextSize   int
-	RecommendedQuant string
-	ollamaModelInfo  *OllamaModelInfo
+	MaximumQuant string
+  Recommendations  map[int]string
+  ollamaModelInfo  *OllamaModelInfo
 }
 
 type OllamaModelInfo struct {

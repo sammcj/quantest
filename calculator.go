@@ -11,8 +11,14 @@ import (
 	"github.com/sammcj/gollama/logging"
 )
 
+// QuantRecommendations holds the recommended quantizations for different context sizes
+type QuantRecommendations struct {
+  UserContext int
+  Recommendations map[int]string
+}
+
 // CalculateBPW calculates the best BPW for a given memory and context constraint
-func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCacheQuantisation, quantType string, ollamaModelInfo *OllamaModelInfo) (interface{}, error) {
+func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCacheQuantisation, quantType string, ollamaModelInfo *OllamaModelInfo) (interface{}, QuantRecommendations, error) {
   logging.DebugLogger.Println("Calculating BPW...")
 
   contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
@@ -22,7 +28,7 @@ func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCa
   }
   bestQuants := make(map[int]string)
 
-  // Function to find best quant for a given context size
+  // Find best quantisation for a given context size
   findBestQuant := func(ctxSize int) string {
       var bestQuant string
       maxBPW := 0.0
@@ -48,29 +54,16 @@ func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCa
       bestQuants[ctxSize] = findBestQuant(ctxSize)
   }
 
-  // Print best quants for each context size
-  fmt.Println("\nRecommended quantizations for different context sizes:")
-  for _, ctxSize := range contextSizes {
-      if quant, ok := bestQuants[ctxSize]; ok && quant != "" {
-          if ctxSize == context {
-              fmt.Printf("Context %d: %s (User Specified)\n", ctxSize, quant)
-          } else {
-              fmt.Printf("Context %d: %s\n", ctxSize, quant)
-          }
-      } else {
-          if ctxSize == context {
-              fmt.Printf("Context %d: No suitable quantization found\n", ctxSize)
-          } else {
-              fmt.Printf("Context %d: No suitable quantization found\n", ctxSize)
-          }
-      }
+  recommendations := QuantRecommendations{
+      UserContext: context,
+      Recommendations: bestQuants,
   }
 
   if bestQuant, ok := bestQuants[context]; ok && bestQuant != "" {
-      return bestQuant, nil
+      return bestQuant, recommendations, nil
   }
 
-  return nil, fmt.Errorf("no suitable BPW found for the given memory constraint and context size")
+  return nil, recommendations, fmt.Errorf("no suitable BPW found for the given memory constraint and context size")
 }
 
 // CalculateVRAM calculates the VRAM usage for a given model and configuration
