@@ -11,7 +11,7 @@ At present quantest is in the process of being used as a library in my [Gollama]
 To use the package as a standalone cli tool, install the package with:
 
 ```bash
-go install github.com/sammcj/quantest@HEAD
+go install github.com/sammcj/quantest/cmd/quantest@latest
 ```
 
 Then run the tool with:
@@ -78,41 +78,19 @@ import "github.com/sammcj/quantest"
 Run a `go mod tidy` and use the package functions as required, e.g:
 
 ```go
-  modelName := "llama3.1:8b" // Ollama model name
-  contextSize := 8192 // Context size
-  vram := 24.0 // Available VRAM
-  kvQuant := "fp16" // Optional kv quantisation level
-
-  estimation, _ := quantest.EstimateVRAM(
-    modelName,
-    contextSize,
-    quantest.KVCacheQuantisation(kvQuant),
-    vram,
-    "", // Optional quantisation level to estimate for
-  )
-
-  // Generate and print the quant estimation table
-  table, _ := quantest.GenerateQuantTable(modelName, *vram, estimation.ollamaModelInfo)
-
-  // Print the recommendations
-  fmt.Println(quantest.PrintFormattedTable(table))
-  fmt.Println("\nMaximum quants for different context sizes:")
-  contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
-  for _, ctxSize := range contextSizes {
-    if quant, ok := estimation.Recommendations[ctxSize]; ok && quant != "" {
-      if ctxSize == estimation.ContextSize {
-        fmt.Printf("Context %d (User Specified): %s \n", ctxSize, quant)
-      } else {
-        fmt.Printf("Context %d: %s\n", ctxSize, quant)
-      }
-    } else {
-      if ctxSize == estimation.ContextSize {
-        fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
-      } else {
-        fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
-      }
+func main() {
+    estimation, err := quantest.EstimateVRAMForModel("llama3.1:8b", 24.0, 8192, "Q4_K_M", "fp16")
+    if err != nil {
+        log.Fatal(err)
     }
-  }
+    fmt.Printf("Estimated VRAM: %.2f GB\n", estimation.EstimatedVRAM)
+
+    table, err := quantest.GenerateQuantTableForModel("llama3.1:8b", 24.0)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(quantest.PrintFormattedTable(table))
+}
 
   // Print the estimation results
   fmt.Printf("\nEstimation Results:\n")

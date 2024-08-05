@@ -1,6 +1,6 @@
-// File: vramestimator/table.go
+// File: quantest/table.go
 
-package main
+package quantest
 
 import (
 	"bytes"

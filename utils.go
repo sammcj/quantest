@@ -1,6 +1,6 @@
-// File: vramestimator/utils.go
+// File: quantest/utils.go
 
-package main
+package quantest
 
 import (
 	"fmt"

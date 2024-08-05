@@ -46,18 +46,18 @@ help: ## This help function
 
 docs: ## Generate documentation
 	@echo "Generating documentation..."
-	@rm -f ./docs/cli.md && ./quantest --help 2> ./docs/cli.md
-	@go doc EstimateVRAM > ./docs/pkg.md
+	@rm -f ./docs/cli.md && go run ./cmd/quantest/main.go --help 2> ./docs/cli.md
+	@go doc EstimateVRAMForModel > ./docs/pkg.md
 	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GenerateQuantTable >> ./docs/pkg.md
+	@go doc GenerateQuantTableForModel >> ./docs/pkg.md
 	@echo -e "\n" >> ./docs/pkg.md
-	@go doc OllamaModelInfo >> ./docs/pkg.md
+	@go doc GetRecommendations >> ./docs/pkg.md
 	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GetModelConfig >> ./docs/pkg.md
+	@go doc GetMaxContextSize >> ./docs/pkg.md
 	@echo -e "\n" >> ./docs/pkg.md
-	@go doc CalculateContext >> ./docs/pkg.md
+	@go doc GetMaximumQuant >> ./docs/pkg.md
 	@echo -e "\n" >> ./docs/pkg.md
-	@go doc CalculateVRAMRaw >> ./docs/pkg.md
+	@go doc PrintEstimationResults >> ./docs/pkg.md
 	@echo "Documentation generated"
 
 clean: ## Clean

@@ -1,6 +1,6 @@
-// File: vramestimator/cuda.go
+// File: quantest/cuda.go
 
-package main
+package quantest
 
 import (
 	"os"

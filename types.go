@@ -1,6 +1,6 @@
-// File: vramestimator/types.go
+// File: quantest/types.go
 
-package main
+package quantest
 
 import "sync"
 

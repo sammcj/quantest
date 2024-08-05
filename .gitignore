@@ -43,4 +43,5 @@ Modelfile*
 **/*.DS_Store
 **/cache
 
-quantest
+/quantest
+/main
