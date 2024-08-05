@@ -17,7 +17,6 @@ func main() {
 	quantLevel := flag.String("quant", quantest.DefaultQuantLevel, "Optional quantisation level")
 	kvQuant := flag.String("kvQuant", "fp16", "Optional KV Cache quantisation level")
 	versionFlag := flag.Bool("v", false, "Print the version and exit")
-	debug := flag.Bool("debug", false, "Enable debug logging")
 
 	flag.Parse()
 
@@ -35,25 +34,12 @@ func main() {
 		fmt.Println("Error: Model name is required. Use --model or provide it as the first argument.")
 		os.Exit(1)
 	}
-
-	// Enable debug logging if the flag is set
-	if *debug {
-		// Note: We removed the EnableDebugLogging call as it's not defined
-		// fmt.Println("Debug logging enabled")
-	}
-
-	// fmt.Printf("DEBUG: Main function - model name: %s\n", modelName)
-
 	// If this is where GetHFModelConfig or EstimateVRAMForModel is called:
-
 	estimation, err := quantest.EstimateVRAMForModel(modelName, *vram, *contextSize, *quantLevel, *kvQuant)
 	if err != nil {
-		// fmt.Printf("DEBUG: Error in EstimateVRAMForModel: %v\n", err)
 		handleError(err, modelName)
 		os.Exit(1)
 	}
-
-	// fmt.Printf("DEBUG: Estimation successful: %+v\n", estimation)
 
 	// Generate and print the quant estimation table
 	table, err := quantest.GenerateQuantTable(estimation.ModelConfig, *vram)

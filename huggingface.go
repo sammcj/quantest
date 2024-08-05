@@ -15,9 +15,6 @@ import (
 
 // DownloadFile downloads a file from a URL and saves it to the specified path
 func DownloadFile(url, filePath string, headers map[string]string) error {
-	// fmt.Println("DEBUG: DownloadFile is running with the latest changes")
-	// fmt.Printf("DEBUG: URL received in DownloadFile: %s\n", url)
-
 	if _, err := os.Stat(filePath); err == nil {
 		logging.InfoLogger.Println("File already exists, skipping download")
 		return nil
@@ -30,7 +27,6 @@ func DownloadFile(url, filePath string, headers map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	// fmt.Printf("DEBUG: Final request URL: %s\n", req.URL.String())
 
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -83,22 +79,18 @@ func DownloadFile(url, filePath string, headers map[string]string) error {
 //		log.Fatal(err)
 //	}
 func GetHFModelConfig(modelID string) (ModelConfig, error) {
-	// fmt.Println("DEBUG: GetHFModelConfig is running with the latest changes")
-	// fmt.Printf("DEBUG: modelID received: %s\n", modelID)
-
 	if modelID == "" {
 		return ModelConfig{}, fmt.Errorf("empty model ID provided")
 	}
 
 	accessToken := os.Getenv("HUGGINGFACE_TOKEN")
 
-  cacheMutex.RLock()
-  if config, ok := modelConfigCache[modelID]; ok {
-      cacheMutex.RUnlock()
-      return config, nil
-  }
-  cacheMutex.RUnlock()
-
+	cacheMutex.RLock()
+	if config, ok := modelConfigCache[modelID]; ok {
+		cacheMutex.RUnlock()
+		return config, nil
+	}
+	cacheMutex.RUnlock()
 
 	baseDir := filepath.Join(os.Getenv("HOME"), ".cache", "huggingface", "hub", modelID)
 	configPath := filepath.Join(baseDir, "config.json")
@@ -108,23 +100,15 @@ func GetHFModelConfig(modelID string) (ModelConfig, error) {
 	if err != nil {
 		return ModelConfig{}, err
 	}
-	// fmt.Printf("DEBUG: Raw config file content: %s\n", string(configFile))
 
 	var config ModelConfig
-if err := json.Unmarshal(configFile, &config); err != nil {
-    // fmt.Printf("DEBUG: Error unmarshaling config: %v\n", err)
-    return ModelConfig{}, err
-}
-
-	// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
+	if err := json.Unmarshal(configFile, &config); err != nil {
+		return ModelConfig{}, err
+	}
 
 	// Ensure the modelID is properly URL-encoded
 	encodedModelID := url.PathEscape(modelID)
-	// fmt.Printf("DEBUG: encodedModelID: %s\n", encodedModelID)
-
 	configURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/config.json", encodedModelID)
-	// fmt.Printf("DEBUG: configURL constructed: %s\n", configURL)
-
 	indexURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/model.safetensors.index.json", encodedModelID)
 
 	logging.DebugLogger.Printf("Config URL: %s", configURL)
@@ -144,8 +128,6 @@ if err := json.Unmarshal(configFile, &config); err != nil {
 		return ModelConfig{}, err
 	}
 
-	// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
-
 	var index struct {
 		Metadata struct {
 			TotalSize float64 `json:"total_size"`
@@ -157,19 +139,14 @@ if err := json.Unmarshal(configFile, &config); err != nil {
 
 	config.NumParams = index.Metadata.TotalSize / 2 / 1e9
 
+	// Set the fields that are not in the JSON
+	config.ModelName = modelID
+	config.NumParams = index.Metadata.TotalSize / 2 / 1e9
+	config.IsOllama = false
 
+	cacheMutex.Lock()
+	modelConfigCache[modelID] = config
+	cacheMutex.Unlock()
 
-// Set the fields that are not in the JSON
-config.ModelName = modelID
-config.NumParams = index.Metadata.TotalSize / 2 / 1e9
-config.IsOllama = false
-
-// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
-
-
-cacheMutex.Lock()
-modelConfigCache[modelID] = config
-cacheMutex.Unlock()
-
-return config, nil
+	return config, nil
 }

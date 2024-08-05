@@ -14,10 +14,10 @@ import (
 )
 
 func GetOllamaModelConfig(modelID string) (ModelConfig, error) {
-  ollamaInfo, err := FetchOllamaModelInfo(modelID)
-  if err != nil {
-      return ModelConfig{}, fmt.Errorf("error fetching Ollama model info: %w", err)
-  }
+	ollamaInfo, err := FetchOllamaModelInfo(modelID)
+	if err != nil {
+		return ModelConfig{}, fmt.Errorf("error fetching Ollama model info: %w", err)
+	}
 
 	return ModelConfig{
 		ModelName:             modelID,
@@ -34,8 +34,8 @@ func GetOllamaModelConfig(modelID string) (ModelConfig, error) {
 }
 
 var (
-  ollamaModelInfoCache = make(map[string]*OllamaModelInfo)
-  ollamaCacheMutex     sync.RWMutex
+	ollamaModelInfoCache = make(map[string]*OllamaModelInfo)
+	ollamaCacheMutex     sync.RWMutex
 )
 
 // TODO: Function to estimate the number of hidden layers based on OllamaModelInfo
@@ -61,35 +61,35 @@ func estimateHiddenLayers(*OllamaModelInfo) int {
 //	}
 //	fmt.Printf("Model Info: %+v\n", modelInfo)
 func FetchOllamaModelInfo(modelName string) (*OllamaModelInfo, error) {
-  ollamaCacheMutex.RLock()
-  if cachedInfo, ok := ollamaModelInfoCache[modelName]; ok {
-      ollamaCacheMutex.RUnlock()
-      return cachedInfo, nil
-  }
-  ollamaCacheMutex.RUnlock()
-  apiURL := os.Getenv("OLLAMA_HOST")
-  if apiURL == "" {
-      apiURL = "http://localhost:11434" // Default Ollama API URL
-  }
+	ollamaCacheMutex.RLock()
+	if cachedInfo, ok := ollamaModelInfoCache[modelName]; ok {
+		ollamaCacheMutex.RUnlock()
+		return cachedInfo, nil
+	}
+	ollamaCacheMutex.RUnlock()
+	apiURL := os.Getenv("OLLAMA_HOST")
+	if apiURL == "" {
+		apiURL = "http://localhost:11434" // Default Ollama API URL
+	}
 
-  logging.InfoLogger.Println("Using Ollama API URL:", apiURL)
-  fmt.Println("Using Ollama API URL:", apiURL)
+	logging.InfoLogger.Println("Using Ollama API URL:", apiURL)
+	fmt.Println("Using Ollama API URL:", apiURL)
 
-  url := fmt.Sprintf("%s/api/show", apiURL)
-  payload := []byte(fmt.Sprintf(`{"model": "%s"}`, modelName))
+	url := fmt.Sprintf("%s/api/show", apiURL)
+	payload := []byte(fmt.Sprintf(`{"model": "%s"}`, modelName))
 
-  logging.InfoLogger.Println("Sending request to:", url)
-  logging.DebugLogger.Println("With payload:", string(payload))
+	logging.InfoLogger.Println("Sending request to:", url)
+	logging.DebugLogger.Println("With payload:", string(payload))
 
-  client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second}
 
-  resp, err := client.Post(url, "application/json", bytes.NewBuffer(payload))
-  if err != nil {
-    return nil, fmt.Errorf("error making request to Ollama API: %v", err)
-  }
-  defer resp.Body.Close()
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, fmt.Errorf("error making request to Ollama API: %v", err)
+	}
+	defer resp.Body.Close()
 
-  body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("ollama API returned non-OK status: %d, body: %s", resp.StatusCode, string(body))
@@ -134,12 +134,12 @@ func FetchOllamaModelInfo(modelName string) (*OllamaModelInfo, error) {
 		modelInfo.ModelInfo.VocabSize = int(vocabSize)
 	}
 
-  logging.DebugLogger.Println("Response status:", resp.Status)
-  logging.DebugLogger.Println("Response body:", string(body))
+	logging.DebugLogger.Println("Response status:", resp.Status)
+	logging.DebugLogger.Println("Response body:", string(body))
 
-  ollamaCacheMutex.Lock()
-  ollamaModelInfoCache[modelName] = modelInfo
-  ollamaCacheMutex.Unlock()
+	ollamaCacheMutex.Lock()
+	ollamaModelInfoCache[modelName] = modelInfo
+	ollamaCacheMutex.Unlock()
 
-  return modelInfo, nil
+	return modelInfo, nil
 }

@@ -6,16 +6,16 @@ import "sync"
 
 // ModelConfig represents the configuration of a model.
 type ModelConfig struct {
-  ModelName             string  `json:"-"`
-  NumParams             float64 `json:"-"`
-  MaxPositionEmbeddings int     `json:"max_position_embeddings"`
-  NumHiddenLayers       int     `json:"num_hidden_layers"`
-  HiddenSize            int     `json:"hidden_size"`
-  NumKeyValueHeads      int     `json:"num_key_value_heads"`
-  NumAttentionHeads     int     `json:"num_attention_heads"`
-  IntermediateSize      int     `json:"intermediate_size"`
-  VocabSize             int     `json:"vocab_size"`
-  IsOllama              bool    `json:"-"`
+	ModelName             string  `json:"-"`
+	NumParams             float64 `json:"-"`
+	MaxPositionEmbeddings int     `json:"max_position_embeddings"`
+	NumHiddenLayers       int     `json:"num_hidden_layers"`
+	HiddenSize            int     `json:"hidden_size"`
+	NumKeyValueHeads      int     `json:"num_key_value_heads"`
+	NumAttentionHeads     int     `json:"num_attention_heads"`
+	IntermediateSize      int     `json:"intermediate_size"`
+	VocabSize             int     `json:"vocab_size"`
+	IsOllama              bool    `json:"-"`
 }
 
 // BPWValues represents the bits per weight values for a given quantisation.
@@ -47,18 +47,18 @@ type QuantResultTable struct {
 
 // VRAMEstimation represents the results of a VRAM estimation.
 type VRAMEstimation struct {
-  ModelName       string
-  ModelConfig     ModelConfig
-  ContextSize     int
-  KVCacheQuant    KVCacheQuantisation
-  AvailableVRAM   float64
-  QuantLevel      string
-  EstimatedVRAM   float64
-  FitsAvailable   bool
-  MaxContextSize  int
-  MaximumQuant    string
-  Recommendations map[int]string
-  ollamaModelInfo *OllamaModelInfo
+	ModelName       string
+	ModelConfig     ModelConfig
+	ContextSize     int
+	KVCacheQuant    KVCacheQuantisation
+	AvailableVRAM   float64
+	QuantLevel      string
+	EstimatedVRAM   float64
+	FitsAvailable   bool
+	MaxContextSize  int
+	MaximumQuant    string
+	Recommendations map[int]string
+	ollamaModelInfo *OllamaModelInfo
 }
 
 // OllamaModelInfo represents the model information returned by Ollama.

@@ -72,7 +72,7 @@ func EstimateVRAM(
 		return nil, err
 	}
 
-  modelConfig, _ := GetModelConfig(*modelName)
+	modelConfig, _ := GetModelConfig(*modelName)
 
 	estimatedVRAM, err := CalculateVRAM(modelConfig, bpw, contextSize, kvCacheQuant)
 	if err != nil {
@@ -84,7 +84,7 @@ func EstimateVRAM(
 		return nil, err
 	}
 
-	maximumQuant, recommendations, err := CalculateBPW(modelConfig, availableVRAM, contextSize, kvCacheQuant, "gguf", )
+	maximumQuant, recommendations, err := CalculateBPW(modelConfig, availableVRAM, contextSize, kvCacheQuant, "gguf")
 	if err != nil {
 		return nil, err
 	}

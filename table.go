@@ -15,18 +15,19 @@ import (
 // GenerateQuantTable generates a quantisation table for a given model.
 //
 // Parameters:
-//  - modelID: A string representing the model ID.
-//  - fitsVRAM: A float64 representing the available VRAM in GB.
-//  - ollamaModelInfo: A pointer to an OllamaModelInfo struct.
+//   - modelID: A string representing the model ID.
+//   - fitsVRAM: A float64 representing the available VRAM in GB.
+//   - ollamaModelInfo: A pointer to an OllamaModelInfo struct.
 //
 // Returns:
-//  - QuantResultTable: A QuantResultTable struct containing the quantisation results.
-//  - error: An error if the quantisation fails.
+//   - QuantResultTable: A QuantResultTable struct containing the quantisation results.
+//   - error: An error if the quantisation fails.
 //
 // Example:
+//
 //	table, _ := GenerateQuantTable("llama3.1", 24.0, nil)
 func GenerateQuantTable(config ModelConfig, fitsVRAM float64) (QuantResultTable, error) {
-  	if fitsVRAM == 0 {
+	if fitsVRAM == 0 {
 		var err error
 		fitsVRAM, err = GetAvailableMemory()
 		if err != nil {
@@ -84,12 +85,13 @@ func GenerateQuantTable(config ModelConfig, fitsVRAM float64) (QuantResultTable,
 // PrintFormattedTable prints a formatted table of the quantisation results.
 //
 // Parameters:
-//  - table: A QuantResultTable struct containing the quantisation results.
+//   - table: A QuantResultTable struct containing the quantisation results.
 //
 // Returns:
-//  - string: A string containing the formatted table.
+//   - string: A string containing the formatted table.
 //
 // Example:
+//
 //	table, _ := GenerateQuantTable("llama3.1", 24.0, nil)
 func PrintFormattedTable(table QuantResultTable) string {
 	var buf bytes.Buffer
