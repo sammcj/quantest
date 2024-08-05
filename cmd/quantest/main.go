@@ -4,18 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sammcj/quantest"
 )
 
-// This is a basic CLI client for the quantest package.
-// It takes a model name and optional flags to estimate the VRAM required for a model
-// and generate a quantisation table for the model.
-// It also provides recommendations for the maximum quantisation levels for different context sizes.
-// Usage:
-// quantest --model <model_name> --vram <vram_in_gb> --context <context_size> --quant <quant_level> --kvQuant <kv_quant_level>
-// Example:
-// quantest --model gpt2 --vram 16 --context 8192 --quant int8 --kvQuant fp16
 func main() {
 	var modelName string
 	flag.StringVar(&modelName, "model", "", "Huggingface/ModelID or Ollama:modelName")
@@ -24,6 +17,7 @@ func main() {
 	quantLevel := flag.String("quant", quantest.DefaultQuantLevel, "Optional quantisation level")
 	kvQuant := flag.String("kvQuant", "fp16", "Optional KV Cache quantisation level")
 	versionFlag := flag.Bool("v", false, "Print the version and exit")
+	debug := flag.Bool("debug", false, "Enable debug logging")
 
 	flag.Parse()
 
@@ -42,17 +36,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Estimate the VRAM
+	// Enable debug logging if the flag is set
+	if *debug {
+		// Note: We removed the EnableDebugLogging call as it's not defined
+		// fmt.Println("Debug logging enabled")
+	}
+
+	// fmt.Printf("DEBUG: Main function - model name: %s\n", modelName)
+
+	// If this is where GetHFModelConfig or EstimateVRAMForModel is called:
+
 	estimation, err := quantest.EstimateVRAMForModel(modelName, *vram, *contextSize, *quantLevel, *kvQuant)
 	if err != nil {
-		fmt.Printf("Error estimating VRAM: %v\n", err)
+		// fmt.Printf("DEBUG: Error in EstimateVRAMForModel: %v\n", err)
+		handleError(err, modelName)
 		os.Exit(1)
 	}
 
+	// fmt.Printf("DEBUG: Estimation successful: %+v\n", estimation)
+
 	// Generate and print the quant estimation table
-	table, err := quantest.GenerateQuantTableForModel(modelName, *vram)
+	table, err := quantest.GenerateQuantTable(estimation.ModelConfig, *vram)
 	if err != nil {
-		fmt.Printf("Error generating quant table: %v\n", err)
+		// fmt.Printf("DEBUG: Error generating quant table: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Println(quantest.PrintFormattedTable(table))
@@ -60,23 +66,34 @@ func main() {
 	// Print the recommendations
 	fmt.Println("\nMaximum quants for context sizes:\n---")
 	contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
-	recommendations := quantest.GetRecommendations(estimation)
 	for _, ctxSize := range contextSizes {
-		if quant, ok := recommendations[ctxSize]; ok && quant != "" {
-			if ctxSize == estimation.ContextSize {
-				fmt.Printf("Context %d (User Specified): %s \n", ctxSize, quant)
-			} else {
-				fmt.Printf("Context %d: %s\n", ctxSize, quant)
-			}
+		if ctxSize == estimation.ContextSize {
+			fmt.Printf("Context %d (User Specified): %s \n", ctxSize, estimation.MaximumQuant)
+		} else if quant, ok := estimation.Recommendations[ctxSize]; ok {
+			fmt.Printf("Context %d: %s\n", ctxSize, quant)
 		} else {
-			if ctxSize == estimation.ContextSize {
-				fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
-			} else {
-				fmt.Printf("Context %d: No suitable quantisation found\n", ctxSize)
-			}
+			fmt.Printf("Context %d: Calculation not available\n", ctxSize)
 		}
 	}
 
 	// Print the estimation results
-	fmt.Println(quantest.PrintEstimationResults(estimation))
+	fmt.Printf("\nEstimation Results:\n")
+	fmt.Printf("Model: %s\n", estimation.ModelName)
+	fmt.Printf("Estimated vRAM Required For A Context Size Of %d: %.2f GB\n", estimation.ContextSize, estimation.EstimatedVRAM)
+	fmt.Printf("Fits Available vRAM: %v\n", estimation.FitsAvailable)
+	fmt.Printf("Max Context Size: %d\n", estimation.MaxContextSize)
+	fmt.Printf("Maximum Quantisation: %s\n", estimation.MaximumQuant)
+}
+
+func handleError(err error, modelName string) {
+	fmt.Printf("Error processing model '%s':\n", modelName)
+	fmt.Printf("%v\n", err)
+
+	if strings.Contains(err.Error(), "Ollama API returned non-OK status") {
+		fmt.Println("\nPossible issues:")
+		fmt.Println("1. Ollama is not running. Try starting it with 'ollama serve'")
+		fmt.Println("2. The model is not available in your Ollama installation. Try 'ollama list' to see available models")
+		fmt.Println("3. There's a mismatch between the model name and what Ollama expects. Try using just the base model name without quantization info")
+		fmt.Println("\nFor more detailed logs, run the command with the --debug flag")
+	}
 }

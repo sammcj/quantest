@@ -48,16 +48,6 @@ docs: ## Generate documentation
 	@echo "Generating documentation..."
 	@rm -f ./docs/cli.md && go run ./cmd/quantest/main.go --help 2> ./docs/cli.md
 	@go doc EstimateVRAMForModel > ./docs/pkg.md
-	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GenerateQuantTableForModel >> ./docs/pkg.md
-	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GetRecommendations >> ./docs/pkg.md
-	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GetMaxContextSize >> ./docs/pkg.md
-	@echo -e "\n" >> ./docs/pkg.md
-	@go doc GetMaximumQuant >> ./docs/pkg.md
-	@echo -e "\n" >> ./docs/pkg.md
-	@go doc PrintEstimationResults >> ./docs/pkg.md
 	@echo "Documentation generated"
 
 clean: ## Clean
@@ -86,7 +76,7 @@ build: ## Run build
 		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	fi
 
-	@go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'"
+	@go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./quantest cmd/quantest/main.go
 	@echo "Build completed, run ./quantest"
 
 ci: ## build for linux and macOS

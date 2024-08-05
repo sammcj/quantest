@@ -25,8 +25,8 @@ import (
 //
 // Example:
 //	table, _ := GenerateQuantTable("llama3.1", 24.0, nil)
-func GenerateQuantTable(modelID string, fitsVRAM float64, ollamaModelInfo *OllamaModelInfo) (QuantResultTable, error) {
-	if fitsVRAM == 0 {
+func GenerateQuantTable(config ModelConfig, fitsVRAM float64) (QuantResultTable, error) {
+  	if fitsVRAM == 0 {
 		var err error
 		fitsVRAM, err = GetAvailableMemory()
 		if err != nil {
@@ -36,16 +36,15 @@ func GenerateQuantTable(modelID string, fitsVRAM float64, ollamaModelInfo *Ollam
 		log.Printf("Using %.2f GB as available memory for VRAM estimation", fitsVRAM)
 	}
 
-	table := QuantResultTable{ModelID: modelID, FitsVRAM: fitsVRAM}
+	table := QuantResultTable{ModelID: config.ModelName, FitsVRAM: fitsVRAM}
 	contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
 
-	if ollamaModelInfo == nil {
-		_, err := GetModelConfig(modelID)
+	if !config.IsOllama {
+		_, err := GetHFModelConfig(config.ModelName)
 		if err != nil {
 			return QuantResultTable{}, err
 		}
 	}
-
 	for quantType, bpw := range GGUFMapping {
 		var result QuantResult
 		result.QuantType = quantType
@@ -53,15 +52,15 @@ func GenerateQuantTable(modelID string, fitsVRAM float64, ollamaModelInfo *Ollam
 		result.Contexts = make(map[int]ContextVRAM)
 
 		for _, context := range contextSizes {
-			vramFP16, err := CalculateVRAM(modelID, bpw, context, KVCacheFP16, ollamaModelInfo)
+			vramFP16, err := CalculateVRAM(config, bpw, context, KVCacheFP16)
 			if err != nil {
 				return QuantResultTable{}, err
 			}
-			vramQ8_0, err := CalculateVRAM(modelID, bpw, context, KVCacheQ8_0, ollamaModelInfo)
+			vramQ8_0, err := CalculateVRAM(config, bpw, context, KVCacheQ8_0)
 			if err != nil {
 				return QuantResultTable{}, err
 			}
-			vramQ4_0, err := CalculateVRAM(modelID, bpw, context, KVCacheQ4_0, ollamaModelInfo)
+			vramQ4_0, err := CalculateVRAM(config, bpw, context, KVCacheQ4_0)
 			if err != nil {
 				return QuantResultTable{}, err
 			}

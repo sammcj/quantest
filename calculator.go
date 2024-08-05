@@ -18,8 +18,8 @@ type QuantRecommendations struct {
 }
 
 // CalculateBPW calculates the best BPW for a given memory and context constraint
-func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCacheQuantisation, quantType string, ollamaModelInfo *OllamaModelInfo) (interface{}, QuantRecommendations, error) {
-  logging.DebugLogger.Println("Calculating BPW...")
+func CalculateBPW(config ModelConfig, memory float64, context int, kvCacheQuant KVCacheQuantisation, quantType string) (interface{}, QuantRecommendations, error) {
+  // fmt.Printf("DEBUG: CalculateBPW called with config: %+v, memory: %.2f, context: %d, kvCacheQuant: %v, quantType: %s\n", config, memory, context, kvCacheQuant, quantType)
 
   contextSizes := []int{2048, 8192, 16384, 32768, 49152, 65536}
   if !slices.Contains(contextSizes, context) {
@@ -33,18 +33,21 @@ func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCa
       var bestQuant string
       maxBPW := 0.0
 
-      for quantName, bpw := range GGUFMapping {
-          vram, err := CalculateVRAM(modelID, bpw, ctxSize, kvCacheQuant, ollamaModelInfo)
-          if err != nil {
-              logging.ErrorLogger.Printf("Error calculating VRAM for %s: %v", quantName, err)
-              continue
-          }
 
-          if vram <= memory && bpw > maxBPW {
-              maxBPW = bpw
-              bestQuant = quantName
-          }
-      }
+      for quantName, bpw := range GGUFMapping {
+        // fmt.Printf("DEBUG: Trying quant %s with BPW %.2f\n", quantName, bpw)
+        vram, err := CalculateVRAM(config, bpw, ctxSize, kvCacheQuant)
+        if err != nil {
+            // fmt.Printf("DEBUG: Error calculating VRAM for %s: %v\n", quantName, err)
+            continue
+        }
+        // fmt.Printf("DEBUG: Calculated VRAM for %s: %.2f GB\n", quantName, vram)
+
+        if vram <= memory && bpw > maxBPW {
+            maxBPW = bpw
+            bestQuant = quantName
+        }
+    }
 
       return bestQuant
   }
@@ -67,39 +70,23 @@ func CalculateBPW(modelID string, memory float64, context int, kvCacheQuant KVCa
 }
 
 // CalculateVRAM calculates the VRAM usage for a given model and configuration
-func CalculateVRAM(modelID string, bpw float64, context int, kvCacheQuant KVCacheQuantisation, ollamaModelInfo *OllamaModelInfo) (float64, error) {
-	logging.DebugLogger.Println("Calculating VRAM usage...")
+//
+// Parameters:
+//  - modelName: A string representing the model name.
+//  - bpw: A float64 representing the bits per weight.
+//  - contextSize: An integer representing the context size.
+//  - kvCacheQuant: The KV cache quantization level.
+//  - ollamaModelInfo: A pointer to an OllamaModelInfo struct.
+//
+// Returns:
+//  - float64: A float64 representing the VRAM usage in GB.
+//  - error: An error if the calculation fails.
+//
+// Example:
+//  vram, _ := CalculateVRAM("llama3.1", 24.0, 8192, KVCacheFP16, nil)
+func CalculateVRAM(config ModelConfig, bpw float64, context int, kvCacheQuant KVCacheQuantisation) (float64, error) {
+  // fmt.Printf("DEBUG: CalculateVRAM called with config: %+v, bpw: %.2f, context: %d, kvCacheQuant: %v\n", config, bpw, context, kvCacheQuant)
 
-	var config ModelConfig
-	var err error
-
-	if ollamaModelInfo != nil {
-		// Use Ollama model information
-		config = ModelConfig{
-			NumParams:             float64(ollamaModelInfo.ModelInfo.ParameterCount) / 1e9, // Convert to billions
-			MaxPositionEmbeddings: ollamaModelInfo.ModelInfo.ContextLength,
-			NumHiddenLayers:       0, // Not provided in Ollama API, might need to be inferred
-			HiddenSize:            ollamaModelInfo.ModelInfo.EmbeddingLength,
-			NumKeyValueHeads:      ollamaModelInfo.ModelInfo.AttentionHeadCountKV,
-			NumAttentionHeads:     ollamaModelInfo.ModelInfo.AttentionHeadCount,
-			IntermediateSize:      ollamaModelInfo.ModelInfo.FeedForwardLength,
-			VocabSize:             ollamaModelInfo.ModelInfo.VocabSize,
-		}
-
-		// Parse BPW from quantization level if not provided
-		if bpw == 0 {
-			bpw, err = ParseBPWOrQuant(ollamaModelInfo.Details.QuantizationLevel)
-			if err != nil {
-				return 0, fmt.Errorf("error parsing BPW from Ollama quantization level: %v", err)
-			}
-		}
-	} else {
-		// Use Hugging Face model information
-		config, err = GetModelConfig(modelID)
-		if err != nil {
-			return 0, err
-		}
-	}
 
 	bpwValues := GetBPWValues(bpw, kvCacheQuant)
 
@@ -107,9 +94,12 @@ func CalculateVRAM(modelID string, bpw float64, context int, kvCacheQuant KVCach
 		context = config.MaxPositionEmbeddings
 	}
 
-	vram := CalculateVRAMRaw(config, bpwValues, context, 1, true)
-	return math.Round(vram*100) / 100, nil
+  vram := CalculateVRAMRaw(config, bpwValues, context, 1, true)
+  // fmt.Printf("DEBUG: Calculated raw VRAM: %.2f GB\n", vram)
+
+  return math.Round(vram*100) / 100, nil
 }
+
 
 // CalculateContext calculates the maximum context for a given memory constraint
 //
@@ -129,25 +119,23 @@ func CalculateVRAM(modelID string, bpw float64, context int, kvCacheQuant KVCach
 //  if err != nil {
 //      log.Fatal(err)
 //  }
-func CalculateContext(modelID string, memory, bpw float64, kvCacheQuant KVCacheQuantisation, ollamaModelInfo *OllamaModelInfo) (int, error) {
-	logging.DebugLogger.Println("Calculating context...")
+func CalculateContext(config ModelConfig, memory, bpw float64, kvCacheQuant KVCacheQuantisation) (int, error) {
+  	logging.DebugLogger.Println("Calculating context...")
 
 	var maxContext int
-	if ollamaModelInfo != nil {
-		maxContext = ollamaModelInfo.ModelInfo.ContextLength
-	} else {
-		config, err := GetModelConfig(modelID)
+
+		config, err := GetHFModelConfig(config.ModelName)
 		if err != nil {
 			return 0, err
 		}
 		maxContext = config.MaxPositionEmbeddings
-	}
+
 
 	minContext := 512
 	low, high := minContext, maxContext
 	for low < high {
 		mid := (low + high + 1) / 2
-		vram, err := CalculateVRAM(modelID, bpw, mid, kvCacheQuant, ollamaModelInfo)
+		vram, err := CalculateVRAM(config, bpw, mid, kvCacheQuant)
 		if err != nil {
 			return 0, err
 		}
@@ -160,7 +148,7 @@ func CalculateContext(modelID string, memory, bpw float64, kvCacheQuant KVCacheQ
 
 	context := low
 	for context <= maxContext {
-		vram, err := CalculateVRAM(modelID, bpw, context, kvCacheQuant, ollamaModelInfo)
+		vram, err := CalculateVRAM(config, bpw, context, kvCacheQuant)
 		if err != nil {
 			return 0, err
 		}

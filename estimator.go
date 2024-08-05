@@ -72,17 +72,19 @@ func EstimateVRAM(
 		return nil, err
 	}
 
-	estimatedVRAM, err := CalculateVRAM(*modelName, bpw, contextSize, kvCacheQuant, ollamaModelInfo)
+  modelConfig, _ := GetModelConfig(*modelName)
+
+	estimatedVRAM, err := CalculateVRAM(modelConfig, bpw, contextSize, kvCacheQuant)
 	if err != nil {
 		return nil, err
 	}
 
-	maxContextSize, err := CalculateContext(*modelName, availableVRAM, bpw, kvCacheQuant, ollamaModelInfo)
+	maxContextSize, err := CalculateContext(modelConfig, availableVRAM, bpw, kvCacheQuant)
 	if err != nil {
 		return nil, err
 	}
 
-	maximumQuant, recommendations, err := CalculateBPW(*modelName, availableVRAM, contextSize, kvCacheQuant, "gguf", ollamaModelInfo)
+	maximumQuant, recommendations, err := CalculateBPW(modelConfig, availableVRAM, contextSize, kvCacheQuant, "gguf", )
 	if err != nil {
 		return nil, err
 	}

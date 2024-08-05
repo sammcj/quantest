@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -14,34 +15,41 @@ import (
 
 // DownloadFile downloads a file from a URL and saves it to the specified path
 func DownloadFile(url, filePath string, headers map[string]string) error {
+	// fmt.Println("DEBUG: DownloadFile is running with the latest changes")
+	// fmt.Printf("DEBUG: URL received in DownloadFile: %s\n", url)
+
 	if _, err := os.Stat(filePath); err == nil {
 		logging.InfoLogger.Println("File already exists, skipping download")
 		return nil
 	}
-
-	// fmt.Printf("Downloading file from: %s\n", url)
-	logging.DebugLogger.Println("Downloading file from:", url)
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create request: %w", err)
 	}
+	// fmt.Printf("DEBUG: Final request URL: %s\n", req.URL.String())
 
 	for key, value := range headers {
 		req.Header.Set(key, value)
+		logging.DebugLogger.Printf("Setting header: %s: %s", key, value)
 	}
 
+	logging.DebugLogger.Printf("Sending request to: %s", req.URL.String())
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
+	logging.DebugLogger.Printf("Response status: %s", resp.Status)
+	logging.DebugLogger.Printf("Response headers: %v", resp.Header)
+
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("bad status: %s, URL: %s, body: %s", resp.Status, url, string(body))
 	}
 
 	dir := filepath.Dir(filePath)
@@ -59,7 +67,7 @@ func DownloadFile(url, filePath string, headers map[string]string) error {
 	return err
 }
 
-// GetModelConfig retrieves and parses the model configuration from Huggingface
+// GetHFModelConfig retrieves and parses the model configuration from Huggingface
 //
 // Parameters:
 //   - modelID: A string representing the model ID.
@@ -70,25 +78,57 @@ func DownloadFile(url, filePath string, headers map[string]string) error {
 //
 // Example:
 //
-//	config, err := GetModelConfig("meta/llama3.1")
+//	config, err := GetHFModelConfig("meta/llama3.1")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-func GetModelConfig(modelID string) (ModelConfig, error) {
-  accessToken := os.Getenv("HUGGINGFACE_TOKEN")
-	cacheMutex.RLock()
-	if config, ok := modelConfigCache[modelID]; ok {
-		cacheMutex.RUnlock()
-		return config, nil
-	}
-	cacheMutex.RUnlock()
+func GetHFModelConfig(modelID string) (ModelConfig, error) {
+	// fmt.Println("DEBUG: GetHFModelConfig is running with the latest changes")
+	// fmt.Printf("DEBUG: modelID received: %s\n", modelID)
 
-	baseDir := filepath.Join(os.Getenv("HOME"), ".cache/huggingface/hub", modelID)
+	if modelID == "" {
+		return ModelConfig{}, fmt.Errorf("empty model ID provided")
+	}
+
+	accessToken := os.Getenv("HUGGINGFACE_TOKEN")
+
+  cacheMutex.RLock()
+  if config, ok := modelConfigCache[modelID]; ok {
+      cacheMutex.RUnlock()
+      return config, nil
+  }
+  cacheMutex.RUnlock()
+
+
+	baseDir := filepath.Join(os.Getenv("HOME"), ".cache", "huggingface", "hub", modelID)
 	configPath := filepath.Join(baseDir, "config.json")
 	indexPath := filepath.Join(baseDir, "model.safetensors.index.json")
 
-	configURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/config.json", modelID)
-	indexURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/model.safetensors.index.json", modelID)
+	configFile, err := os.ReadFile(configPath)
+	if err != nil {
+		return ModelConfig{}, err
+	}
+	// fmt.Printf("DEBUG: Raw config file content: %s\n", string(configFile))
+
+	var config ModelConfig
+if err := json.Unmarshal(configFile, &config); err != nil {
+    // fmt.Printf("DEBUG: Error unmarshaling config: %v\n", err)
+    return ModelConfig{}, err
+}
+
+	// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
+
+	// Ensure the modelID is properly URL-encoded
+	encodedModelID := url.PathEscape(modelID)
+	// fmt.Printf("DEBUG: encodedModelID: %s\n", encodedModelID)
+
+	configURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/config.json", encodedModelID)
+	// fmt.Printf("DEBUG: configURL constructed: %s\n", configURL)
+
+	indexURL := fmt.Sprintf("https://huggingface.co/%s/raw/main/model.safetensors.index.json", encodedModelID)
+
+	logging.DebugLogger.Printf("Config URL: %s", configURL)
+	logging.DebugLogger.Printf("Index URL: %s", indexURL)
 
 	headers := make(map[string]string)
 	if accessToken != "" {
@@ -96,16 +136,7 @@ func GetModelConfig(modelID string) (ModelConfig, error) {
 	}
 
 	if err := DownloadFile(configURL, configPath, headers); err != nil {
-		return ModelConfig{}, err
-	}
-
-	if err := DownloadFile(indexURL, indexPath, headers); err != nil {
-		return ModelConfig{}, err
-	}
-
-	configFile, err := os.ReadFile(configPath)
-	if err != nil {
-		return ModelConfig{}, err
+		return ModelConfig{}, fmt.Errorf("failed to download config.json: %w", err)
 	}
 
 	indexFile, err := os.ReadFile(indexPath)
@@ -113,10 +144,7 @@ func GetModelConfig(modelID string) (ModelConfig, error) {
 		return ModelConfig{}, err
 	}
 
-	var config ModelConfig
-	if err := json.Unmarshal(configFile, &config); err != nil {
-		return ModelConfig{}, err
-	}
+	// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
 
 	var index struct {
 		Metadata struct {
@@ -129,9 +157,19 @@ func GetModelConfig(modelID string) (ModelConfig, error) {
 
 	config.NumParams = index.Metadata.TotalSize / 2 / 1e9
 
-	cacheMutex.Lock()
-	modelConfigCache[modelID] = config
-	cacheMutex.Unlock()
 
-	return config, nil
+
+// Set the fields that are not in the JSON
+config.ModelName = modelID
+config.NumParams = index.Metadata.TotalSize / 2 / 1e9
+config.IsOllama = false
+
+// fmt.Printf("DEBUG: Parsed config: %+v\n", config)
+
+
+cacheMutex.Lock()
+modelConfigCache[modelID] = config
+cacheMutex.Unlock()
+
+return config, nil
 }
