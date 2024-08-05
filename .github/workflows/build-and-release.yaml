@@ -1,0 +1,127 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - screenshots/**
+      - renovate.json
+      - .github/workflows/build-and-release.yaml
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - screenshots/**
+      - renovate.json
+      - .github/workflows/build-and-release.yaml
+
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
+  packages: write
+  statuses: write
+  issues: write
+
+concurrency:
+  group: build-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # don't run if the commit message or PR title contains [skip ci]
+    outputs:
+      new_tag: ${{ steps.get_version.outputs.new_tag }}
+      changelog: ${{ steps.get_version.outputs.changelog }}
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version-file: "go.mod"
+      - run: go version
+
+      # Install dependencies
+      - name: Install dependencies
+        run: go get .
+
+      # Get the version we're building
+      - name: Get version
+        id: get_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          # tag_prefix:
+          #   # blank to remove the v prefix
+
+      # Build
+      - name: Build
+        shell: bash
+        env:
+          QUANTEST_VERSION: ${{ steps.get_version.outputs.new_tag }}
+        run: |
+          set -x
+          make docs
+          QUANTEST_VERSION="$QUANTEST_VERSION" make ci
+          echo "🎉 Builds completed" >> "$GITHUB_STEP_SUMMARY"
+
+      # Test
+      - uses: robherley/go-test-action@a612d1675dda7397d3bced585f8a2a3a8545455f # v0
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
+        if: ${{ startsWith(github.ref, 'refs/heads/main') && !contains(github.event.head_commit.message, '[skip ci]') && ! contains(github.event.pull_request.title, '[skip ci]') }}
+        with:
+          name: quantest
+          path: |
+            quantest-*.zip
+
+      # Publish
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5 # v1
+        if: ${{ startsWith(github.ref, 'refs/heads/main') && !contains(github.event.head_commit.message, '[skip ci]') && ! contains(github.event.pull_request.title, '[skip ci]') }}
+        with:
+          tag: ${{ steps.get_version.outputs.new_tag }}
+          name: Release ${{ steps.get_version.outputs.new_tag }}
+          body: ${{ steps.get_version.outputs.changelog }}
+          skipIfReleaseExists: true
+          generateReleaseNotes: true
+          allowUpdates: true
+          makeLatest: ${{ startsWith(github.ref, 'refs/heads/main') && !contains(github.event.head_commit.message, '[skip ci]') && ! contains(github.event.pull_request.title, '[skip ci]') }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/heads/main') }}
+          draft: true # I want to manually mark the release as ready
+          artifactErrorsFailBuild: true
+          artifacts: |
+            quantest-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Bump version
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
+        if: ${{ startsWith(github.ref, 'refs/heads/main') && !contains(github.event.head_commit.message, '[skip ci]') }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: main
+          pre_release_branches: dev
+          dry_run: ${{ !startsWith(github.ref, 'refs/heads/main') }}
+          custom_tag: ${{ steps.get_version.outputs.new_tag }}
+          # tag_prefix:
+          # blank to remove the v prefix
+
+  # if the workflow is cancelled, don't mark the workflow as failed
+  cleanup:
+    runs-on: ubuntu-latest
+    if: cancelled()
+    steps:
+      - id: cleanup-cancelled
+        run: echo "Workflow was cancelled"
