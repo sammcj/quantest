@@ -144,3 +144,13 @@ func FetchOllamaModelInfo(modelName string) (*OllamaModelInfo, error) {
 
 	return modelInfo, nil
 }
+
+// A function that takes an ollama model/name and returns the quantisation level
+func GetOllamaQuantLevel(modelName string) (string, error) {
+  modelInfo, err := FetchOllamaModelInfo(modelName)
+  if err != nil {
+    return "", fmt.Errorf("error fetching Ollama model info: %w", err)
+  }
+
+  return modelInfo.Details.QuantizationLevel, nil
+}
