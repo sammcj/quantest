@@ -69,8 +69,8 @@ jobs:
           QUANTEST_VERSION: ${{ steps.get_version.outputs.new_tag }}
         run: |
           set -x
-          make docs
           QUANTEST_VERSION="$QUANTEST_VERSION" make ci
+          make docs
           echo "🎉 Builds completed" >> "$GITHUB_STEP_SUMMARY"
 
       # Test
