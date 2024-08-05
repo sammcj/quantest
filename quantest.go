@@ -22,6 +22,14 @@ func EstimateVRAMForModel(modelName string, vram float64, contextSize int, quant
 		return nil, fmt.Errorf("error getting model config: %w", err)
 	}
 
+  // If quantLevel is not provided, and it's an ollama model, check the model's config
+  if quantLevel == "" && modelConfig.IsOllama {
+    quantLevel = modelConfig.QuantLevel
+  } else if quantLevel == "" {
+    fmt.Println("Quant level not provided, and model is not an Ollama model. Defaulting to q4_k_m...")
+    quantLevel = "q4_k_m"
+  }
+
 	// Parse BPW from quantLevel
 	bpw, err := ParseBPWOrQuant(quantLevel)
 	if err != nil {

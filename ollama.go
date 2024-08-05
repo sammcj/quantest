@@ -30,6 +30,7 @@ func GetOllamaModelConfig(modelID string) (ModelConfig, error) {
 		IntermediateSize:      ollamaInfo.ModelInfo.FeedForwardLength,
 		VocabSize:             ollamaInfo.ModelInfo.VocabSize,
 		IsOllama:              true,
+    QuantLevel:           ollamaInfo.Details.QuantizationLevel,
 	}, nil
 }
 

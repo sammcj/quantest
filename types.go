@@ -16,6 +16,7 @@ type ModelConfig struct {
 	IntermediateSize      int     `json:"intermediate_size"`
 	VocabSize             int     `json:"vocab_size"`
 	IsOllama              bool    `json:"-"`
+  QuantLevel            string  `json:"quant_level"`
 }
 
 // BPWValues represents the bits per weight values for a given quantisation.
