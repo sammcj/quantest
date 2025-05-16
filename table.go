@@ -9,7 +9,10 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // GenerateQuantTable generates a quantisation table for a given model.
@@ -95,24 +98,43 @@ func GenerateQuantTable(config ModelConfig, fitsVRAM float64) (QuantResultTable,
 //	table, _ := GenerateQuantTable("llama3.1", 24.0, nil)
 func PrintFormattedTable(table QuantResultTable) string {
 	var buf bytes.Buffer
-	tw := tablewriter.NewWriter(&buf)
 
-	// Set table header
-	tw.SetHeader([]string{"Quant|Ctx", "BPW", "2K", "8K", "16K", "32K", "49K", "64K"})
-
-	// Set table style
-	tw.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	tw.SetCenterSeparator("|")
-	tw.SetColumnSeparator("|")
-	tw.SetRowSeparator("-")
-
-	// Set header colour to bright white
-	headerColours := make([]tablewriter.Colors, 8)
-	for i := range headerColours {
-		headerColours[i] = tablewriter.Colors{tablewriter.FgHiWhiteColor}
+	// Configure colors for the table
+	colorCfg := renderer.ColorizedConfig{
+		Header: renderer.Tint{
+			FG: renderer.Colors{color.FgHiWhite}, // Bright white headers
+		},
+		Border: renderer.Tint{
+			FG: renderer.Colors{color.FgWhite}, // White borders
+		},
+		Separator: renderer.Tint{
+			FG: renderer.Colors{color.FgWhite}, // White separators
+		},
 	}
-	tw.SetHeaderColor(headerColours...)
-	// set header row colours to bright white
+
+	// Create a new table with the colorized renderer and configure it
+	rendition := tw.Rendition{
+		Borders: tw.Border{
+			Left:   tw.On,
+			Top:    tw.Off,
+			Right:  tw.On,
+			Bottom: tw.Off,
+		},
+		Symbols: tw.NewSymbols(tw.StyleLight),
+		Settings: tw.Settings{
+			Separators: tw.Separators{
+				BetweenColumns: tw.On,
+			},
+		},
+	}
+
+	tw := tablewriter.NewTable(&buf,
+		tablewriter.WithRenderer(renderer.NewColorized(colorCfg)),
+		tablewriter.WithRendition(rendition),
+	)
+
+	// Set the header
+	tw.Header([]string{"Quant|Ctx", "BPW", "2K", "8K", "16K", "32K", "49K", "64K"})
 
 	// Prepare data rows
 	for _, result := range table.Results {
