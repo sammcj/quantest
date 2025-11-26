@@ -39,7 +39,7 @@ menu: ## Makefile Interactive Menu
 	fi
 
 # Default target
-all: menu
+all: build
 
 help: ## This help function
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -76,7 +76,7 @@ build: ## Run build
 		sed -i -e "s/Version = \".*\"/Version = \"$(QUANTEST_VERSION)\"/g" cmd/quantest/main.go ; \
 	fi
 
-	@go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./quantest cmd/quantest/main.go
+	@go build -v -ldflags="-w -s -X 'main.Version=$(QUANTEST_VERSION)'" -o ./quantest cmd/quantest/main.go
 	@echo "Build completed, run ./quantest"
 
 ci: ## build for linux and macOS
@@ -89,9 +89,9 @@ ci: ## build for linux and macOS
 	@echo "Building with version: $(QUANTEST_VERSION)"
 
 	@mkdir -p ./dist/macos ./dist/linux_amd64 ./dist/linux_arm64
-	GOOS=darwin GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/macos/quantest cmd/quantest/main.go
-	GOOS=linux GOARCH=amd64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_amd64/quantest cmd/quantest/main.go
-	GOOS=linux GOARCH=arm64 go build -v -ldflags="-X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_arm64/quantest cmd/quantest/main.go
+	GOOS=darwin GOARCH=arm64 go build -v -ldflags="-w -s -X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/macos/quantest cmd/quantest/main.go
+	GOOS=linux GOARCH=amd64 go build -v -ldflags="-w -s -X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_amd64/quantest cmd/quantest/main.go
+	GOOS=linux GOARCH=arm64 go build -v -ldflags="-w -s -X 'main.Version=$(QUANTEST_VERSION)'" -o ./dist/linux_arm64/quantest cmd/quantest/main.go
 
 	@zip -r quantest-macos.zip ./dist/macos/quantest
 	@zip -r quantest-linux-amd64.zip ./dist/linux_amd64/quantest
