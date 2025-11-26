@@ -5,8 +5,8 @@ go 1.25.4
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.18.0
-	github.com/olekukonko/tablewriter v1.1.1
-	github.com/sammcj/gollama v1.37.5
+	github.com/olekukonko/tablewriter v1.1.0
+	github.com/sammcj/gollama v1.37.3
 	github.com/shirou/gopsutil v3.21.11+incompatible
 )
 

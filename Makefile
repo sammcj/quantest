@@ -17,6 +17,9 @@ endef
 
 TARGETS := $(call extract_targets)
 
+# Set default target to build
+.DEFAULT_GOAL := build
+
 .PHONY: $(TARGETS) menu all clean test
 
 menu: ## Makefile Interactive Menu
